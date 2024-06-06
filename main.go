@@ -78,16 +78,13 @@ func prepareFolders() {
 			defer file.Close()
 		}
 	}
-
 }
 
 func handleConfig(args []string) {
 	data, err := os.ReadFile("./vcs/config.txt")
-
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatal(err)
 	}
-
 	if len(args) == 0 && len(data) == 0 { // name is not provided, config is empty. Print info
 		fmt.Println("Please, tell me who you are.")
 	} else if len(args) > 0 { // name is provided. Rewrite user
@@ -144,8 +141,9 @@ func handleCommit(args []string) {
 	}
 }
 
+// getLastCommitInfo returns the last commit info from log.txt file
 func getLastCommitInfo() string {
-	f, err := os.Open("./vcs/log.txt")
+	f, err := os.Open(logPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -160,6 +158,8 @@ func getLastCommitInfo() string {
 	return lastCommit
 }
 
+// hashCommit creates a hash ussing currect time + userName by sha1 algorithm and returns result
+// as hexdecimal string
 func hashCommit(userName string) string {
 	sha := sha1.New()
 	sha.Write([]byte(time.Now().String()))
@@ -167,6 +167,7 @@ func hashCommit(userName string) string {
 	return fmt.Sprintf("%x", sha.Sum(nil))
 }
 
+// getUserName reads a current user from cofig.txt file
 func getUserName() string {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -175,6 +176,7 @@ func getUserName() string {
 	return string(data)
 }
 
+// addCommitToLog adds whole information into log.txt about a new commit
 func addCommitToLog(msg, user, commitHash string) {
 	logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR, 0666)
 
@@ -185,6 +187,7 @@ func addCommitToLog(msg, user, commitHash string) {
 	fmt.Fprintf(logFile, "%s|%s|%s\n", commitHash, user, msg)
 }
 
+// createCommit creates a dir for a new commit and put files in it
 func createCommit(commitPath string, files []string) {
 	err := os.MkdirAll(commitPath, os.ModePerm)
 	if err != nil {
@@ -204,31 +207,27 @@ func createCommit(commitPath string, files []string) {
 		}
 		defer dst.Close()
 		io.Copy(dst, src)
-
 	}
 }
 
+// readIndexAsSlice reads index.txt file and return list of files in it
 func readIndexAsSlice() []string {
 	file, err := os.Open(indexPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer file.Close()
 	res := make([]string, 0)
-
 	sc := bufio.NewScanner(file)
-
 	for sc.Scan() {
 		res = append(res, sc.Text())
 	}
-
 	return res
 }
 
+// somehtingChanged check if files were changed after last commit
 func somehtingChanged(data []string) bool {
 	lastCommit := getLastCommitInfo()
-
 	if lastCommit == "" {
 		return true
 	}
